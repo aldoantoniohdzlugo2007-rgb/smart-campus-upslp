@@ -196,37 +196,38 @@ class MapaEstacionamiento extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        FlutterMap(
-          options: MapOptions(
-            initialCenter: centro,
-            initialZoom: 18.3,
-            minZoom: 15,
-            maxZoom: 20,
+        Positioned.fill(
+          child: Image.asset(
+            'assets/croquis_upslp.png',
+            fit: BoxFit.cover,
           ),
-          children: [
-            TileLayer(
-              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-              userAgentPackageName: 'com.upslp.smartcampus',
-            ),
-            MarkerLayer(
-              markers: cajones.map((cajon) {
-                final seleccionado = cajonSeleccionado?.nombre == cajon.nombre;
+        ),
 
-                return Marker(
-                  point: cajon.punto,
-                  width: seleccionado ? 58 : 48,
-                  height: seleccionado ? 58 : 48,
-                  child: GestureDetector(
-                    onTap: () => onSeleccionar(cajon),
-                    child: MarcadorParking(
-                      disponible: cajon.disponible,
-                      seleccionado: seleccionado,
+        Positioned.fill(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return Stack(
+                children: cajones.map((cajon) {
+                  final seleccionado =
+                      cajonSeleccionado?.nombre == cajon.nombre;
+
+                  final posicion = posicionCroquis(cajon.nombre);
+
+                  return Positioned(
+                    left: constraints.maxWidth * posicion.dx - 22,
+                    top: constraints.maxHeight * posicion.dy - 22,
+                    child: GestureDetector(
+                      onTap: () => onSeleccionar(cajon),
+                      child: MarcadorParking(
+                        disponible: cajon.disponible,
+                        seleccionado: seleccionado,
+                      ),
                     ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
+                  );
+                }).toList(),
+              );
+            },
+          ),
         ),
 
         Positioned(
@@ -265,6 +266,29 @@ class MapaEstacionamiento extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+Offset posicionCroquis(String nombre) {
+  switch (nombre) {
+    case 'B-01':
+      return const Offset(0.23, 0.32);
+    case 'B-02':
+      return const Offset(0.23, 0.39);
+    case 'B-03':
+      return const Offset(0.23, 0.46);
+    case 'B-04':
+      return const Offset(0.23, 0.53);
+    case 'B-05':
+      return const Offset(0.23, 0.60);
+    case 'B-06':
+      return const Offset(0.23, 0.67);
+    case 'B-07':
+      return const Offset(0.23, 0.74);
+    case 'B-08':
+      return const Offset(0.23, 0.81);
+    default:
+      return const Offset(0.50, 0.50);
   }
 }
 
