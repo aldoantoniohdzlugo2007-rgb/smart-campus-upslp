@@ -214,13 +214,14 @@ class MapaEstacionamiento extends StatelessWidget {
                   final posicion = posicionCroquis(cajon.nombre);
 
                   return Positioned(
-                    left: constraints.maxWidth * posicion.dx - 22,
-                    top: constraints.maxHeight * posicion.dy - 22,
+                    left: constraints.maxWidth * posicion.dx - 7,
+                    top: constraints.maxHeight * posicion.dy - 7,
                     child: GestureDetector(
                       onTap: () => onSeleccionar(cajon),
                       child: MarcadorParking(
                         disponible: cajon.disponible,
                         seleccionado: seleccionado,
+                        size: 14,
                       ),
                     ),
                   );
@@ -268,25 +269,24 @@ class MapaEstacionamiento extends StatelessWidget {
     );
   }
 }
-
 Offset posicionCroquis(String nombre) {
   switch (nombre) {
     case 'B-01':
-      return const Offset(0.23, 0.32);
+      return const Offset(0.252, 0.217);
     case 'B-02':
-      return const Offset(0.23, 0.39);
+      return const Offset(0.252, 0.242);
     case 'B-03':
-      return const Offset(0.23, 0.46);
+      return const Offset(0.252, 0.267);
     case 'B-04':
-      return const Offset(0.23, 0.53);
+      return const Offset(0.252, 0.292);
     case 'B-05':
-      return const Offset(0.23, 0.60);
+      return const Offset(0.252, 0.317);
     case 'B-06':
-      return const Offset(0.23, 0.67);
+      return const Offset(0.252, 0.342);
     case 'B-07':
-      return const Offset(0.23, 0.74);
+      return const Offset(0.252, 0.367);
     case 'B-08':
-      return const Offset(0.23, 0.81);
+      return const Offset(0.252, 0.392);
     default:
       return const Offset(0.50, 0.50);
   }
@@ -577,41 +577,44 @@ class SeparadorVertical extends StatelessWidget {
 class MarcadorParking extends StatelessWidget {
   final bool disponible;
   final bool seleccionado;
+  final double size;
 
   const MarcadorParking({
     super.key,
     required this.disponible,
     this.seleccionado = false,
+    this.size = 38,
   });
 
   @override
   Widget build(BuildContext context) {
     final color = disponible ? Colors.green : Colors.red;
+    final markerSize = seleccionado ? size + 3 : size;
 
     return Container(
-      width: seleccionado ? 46 : 38,
-      height: seleccionado ? 46 : 38,
+      width: markerSize,
+      height: markerSize,
       decoration: BoxDecoration(
         color: color,
         shape: BoxShape.circle,
         border: Border.all(
           color: seleccionado ? Colors.white : Colors.white70,
-          width: seleccionado ? 4 : 2,
+          width: seleccionado ? 2 : 1,
         ),
         boxShadow: const [
           BoxShadow(
             color: Colors.black38,
-            blurRadius: 5,
-            offset: Offset(1, 2),
+            blurRadius: 3,
+            offset: Offset(1, 1),
           ),
         ],
       ),
       alignment: Alignment.center,
-      child: const Text(
+      child: Text(
         'P',
         style: TextStyle(
           color: Colors.white,
-          fontSize: 23,
+          fontSize: markerSize * 0.58,
           fontWeight: FontWeight.bold,
         ),
       ),
