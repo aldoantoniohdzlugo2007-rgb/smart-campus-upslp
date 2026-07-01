@@ -1,22 +1,14 @@
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform, kIsWeb;
 
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
-    if (kIsWeb) {
-      return web;
-    }
-    throw UnsupportedError(
-      'DefaultFirebaseOptions are not configured for this platform.',
+    return const FirebaseOptions(
+      apiKey: 'AIzaSyDgyMwuwimaOm7WjrWomusCqqjer5518RY',
+      appId: '1:1077805077348:web:2fb996fc9b5e8d4c126071',
+      messagingSenderId: '1077805077348',
+      projectId: 'app-trafico-v2',
+      authDomain: 'app-trafico-v2.firebaseapp.com',
+      storageBucket: 'app-trafico-v2.firebasestorage.app',
     );
   }
-
-  static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyCwxmGY19QcjvxPQ76h40rvXjk3n6zhnMs',
-    authDomain: 'apis-e3fb8.firebaseapp.com',
-    projectId: 'apis-e3fb8',
-    storageBucket: 'apis-e3fb8.firebasestorage.app',
-    messagingSenderId: '259165233493',
-    appId: '1:259165233493:web:9b6cfa13fd1184369fcfdc',
-  );
 }
