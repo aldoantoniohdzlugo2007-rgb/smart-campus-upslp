@@ -1,6 +1,4 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -8,9 +6,11 @@ import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
   runApp(const SmartCampusApp());
 }
 
@@ -36,88 +36,12 @@ class PantallaPrincipal extends StatefulWidget {
 }
 
 class _PantallaPrincipalState extends State<PantallaPrincipal> {
-  late final List<Cajon> cajones;
   Cajon? cajonSeleccionado;
-  Timer? timer;
 
-  // Coordenadas aproximadas del estacionamiento UPSLP cercano a Calle Sara Rivera.
   static const LatLng centroUpslp = LatLng(22.12115, -100.98370);
 
   @override
-  void initState() {
-    super.initState();
-
-    final ahora = DateTime.now();
-
-    cajones = [
-      Cajon(
-        nombre: 'B-01',
-        punto: const LatLng(22.12138, -100.98330),
-        disponible: true,
-        ultimoCambio: ahora.subtract(const Duration(minutes: 3)),
-      ),
-      Cajon(
-        nombre: 'B-02',
-        punto: const LatLng(22.12130, -100.98327),
-        disponible: false,
-        ultimoCambio: ahora.subtract(const Duration(minutes: 12)),
-      ),
-      Cajon(
-        nombre: 'B-03',
-        punto: const LatLng(22.12122, -100.98324),
-        disponible: true,
-        ultimoCambio: ahora.subtract(const Duration(minutes: 7)),
-      ),
-      Cajon(
-        nombre: 'B-04',
-        punto: const LatLng(22.12114, -100.98321),
-        disponible: false,
-        ultimoCambio: ahora.subtract(const Duration(minutes: 25)),
-      ),
-      Cajon(
-        nombre: 'B-05',
-        punto: const LatLng(22.12106, -100.98318),
-        disponible: true,
-        ultimoCambio: ahora.subtract(const Duration(minutes: 2)),
-      ),
-      Cajon(
-        nombre: 'B-06',
-        punto: const LatLng(22.12098, -100.98315),
-        disponible: false,
-        ultimoCambio: ahora.subtract(const Duration(minutes: 18)),
-      ),
-      Cajon(
-        nombre: 'B-07',
-        punto: const LatLng(22.12090, -100.98312),
-        disponible: true,
-        ultimoCambio: ahora.subtract(const Duration(minutes: 5)),
-      ),
-      Cajon(
-        nombre: 'B-08',
-        punto: const LatLng(22.12082, -100.98309),
-        disponible: true,
-        ultimoCambio: ahora.subtract(const Duration(minutes: 1)),
-      ),
-    ];
-
-    cajonSeleccionado = cajones.first;
-
-    timer = Timer.periodic(const Duration(seconds: 30), (_) {
-      setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
-    timer?.cancel();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final disponibles = cajones.where((c) => c.disponible).length;
-    final ocupados = cajones.length - disponibles;
-
     return Scaffold(
       backgroundColor: const Color(0xff071426),
       body: SafeArea(
@@ -139,41 +63,99 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
               ),
             ),
             Expanded(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final esPantallaChica = constraints.maxWidth < 1000;
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('cajones_estacionamiento')
+                    .orderBy('nombre')
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return const Center(
+                      child: Text(
+                        'Error de conexión con Firebase',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    );
+                  }
 
-                  return Row(
-                    children: [
-                      Expanded(
-                        flex: esPantallaChica ? 6 : 7,
-                        child: MapaEstacionamiento(
-                          cajones: cajones,
-                          centro: centroUpslp,
-                          cajonSeleccionado: cajonSeleccionado,
-                          onSeleccionar: (cajon) {
-                            setState(() {
-                              cajonSeleccionado = cajon;
-                            });
-                          },
-                        ),
-                      ),
-                      Container(width: 1, color: Colors.white24),
-                      Expanded(
-                        flex: esPantallaChica ? 4 : 3,
-                        child: PanelInformacion(
-                          cajones: cajones,
-                          disponibles: disponibles,
-                          ocupados: ocupados,
-                          cajonSeleccionado: cajonSeleccionado,
-                          onSeleccionar: (cajon) {
-                            setState(() {
-                              cajonSeleccionado = cajon;
-                            });
-                          },
-                        ),
-                      ),
-                    ],
+                  if (!snapshot.hasData) {
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  }
+
+                  final cajones = snapshot.data!.docs.map((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+
+                    final nombre = data['nombre'] ?? doc.id;
+                    final disponible = data['disponible'] == true;
+
+                    final geo = data['punto'] as GeoPoint?;
+                    final punto = geo != null
+                        ? LatLng(geo.latitude, geo.longitude)
+                        : centroUpslp;
+
+                    final x = (data['x'] as num?)?.toDouble();
+                    final y = (data['y'] as num?)?.toDouble();
+
+                    final posicion = x != null && y != null
+                        ? Offset(x, y)
+                        : posicionCroquis(nombre);
+
+                    final ultimoCambioFirebase = data['ultimoCambio'];
+                    final ultimoCambio = ultimoCambioFirebase is Timestamp
+                        ? ultimoCambioFirebase.toDate()
+                        : DateTime.now();
+
+                    return Cajon(
+                      nombre: nombre,
+                      punto: punto,
+                      posicion: posicion,
+                      disponible: disponible,
+                      ultimoCambio: ultimoCambio,
+                    );
+                  }).toList();
+
+                  final disponibles = cajones.where((c) => c.disponible).length;
+                  final ocupados = cajones.length - disponibles;
+
+                  return LayoutBuilder(
+                    builder: (context, constraints) {
+                      final esPantallaChica = constraints.maxWidth < 1000;
+
+                      return Row(
+                        children: [
+                          Expanded(
+                            flex: esPantallaChica ? 6 : 7,
+                            child: MapaEstacionamiento(
+                              cajones: cajones,
+                              centro: centroUpslp,
+                              cajonSeleccionado: cajonSeleccionado,
+                              onSeleccionar: (cajon) {
+                                setState(() {
+                                  cajonSeleccionado = cajon;
+                                });
+                              },
+                            ),
+                          ),
+                          Container(width: 1, color: Colors.white24),
+                          Expanded(
+                            flex: esPantallaChica ? 4 : 3,
+                            child: PanelInformacion(
+                              cajones: cajones,
+                              disponibles: disponibles,
+                              ocupados: ocupados,
+                              cajonSeleccionado: cajonSeleccionado,
+                              onSeleccionar: (cajon) {
+                                setState(() {
+                                  cajonSeleccionado = cajon;
+                                });
+                              },
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   );
                 },
               ),
@@ -206,10 +188,9 @@ class MapaEstacionamiento extends StatelessWidget {
         Positioned.fill(
           child: Image.asset(
             'assets/croquis_upslp.png',
-            fit: BoxFit.cover,
+            fit: BoxFit.fill,
           ),
         ),
-
         Positioned.fill(
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -218,7 +199,7 @@ class MapaEstacionamiento extends StatelessWidget {
                   final seleccionado =
                       cajonSeleccionado?.nombre == cajon.nombre;
 
-                  final posicion = posicionCroquis(cajon.nombre);
+                  final posicion = cajon.posicion;
 
                   return Positioned(
                     left: constraints.maxWidth * posicion.dx - 7,
@@ -237,7 +218,6 @@ class MapaEstacionamiento extends StatelessWidget {
             },
           ),
         ),
-
         Positioned(
           left: 16,
           bottom: 16,
@@ -256,7 +236,6 @@ class MapaEstacionamiento extends StatelessWidget {
             ),
           ),
         ),
-
         Positioned(
           right: 16,
           bottom: 16,
@@ -276,8 +255,58 @@ class MapaEstacionamiento extends StatelessWidget {
     );
   }
 }
+
 Offset posicionCroquis(String nombre) {
   switch (nombre) {
+    case 'A-01':
+      return const Offset(0.143, 0.150);
+    case 'A-02':
+      return const Offset(0.143, 0.175);
+    case 'A-03':
+      return const Offset(0.143, 0.200);
+    case 'A-04':
+      return const Offset(0.143, 0.225);
+    case 'A-05':
+      return const Offset(0.143, 0.250);
+    case 'A-06':
+      return const Offset(0.143, 0.275);
+    case 'A-07':
+      return const Offset(0.143, 0.300);
+    case 'A-08':
+      return const Offset(0.143, 0.325);
+    case 'A-09':
+      return const Offset(0.143, 0.350);
+    case 'A-10':
+      return const Offset(0.143, 0.375);
+    case 'A-11':
+      return const Offset(0.143, 0.400);
+    case 'A-12':
+      return const Offset(0.143, 0.425);
+    case 'A-13':
+      return const Offset(0.143, 0.450);
+    case 'A-14':
+      return const Offset(0.143, 0.475);
+    case 'A-15':
+      return const Offset(0.143, 0.500);
+    case 'A-16':
+      return const Offset(0.143, 0.525);
+    case 'A-17':
+      return const Offset(0.143, 0.550);
+    case 'A-18':
+      return const Offset(0.143, 0.575);
+    case 'A-19':
+      return const Offset(0.143, 0.600);
+    case 'A-20':
+      return const Offset(0.143, 0.625);
+    case 'A-21':
+      return const Offset(0.143, 0.650);
+    case 'A-22':
+      return const Offset(0.143, 0.675);
+    case 'A-23':
+      return const Offset(0.143, 0.700);
+    case 'A-24':
+      return const Offset(0.143, 0.725);
+
     case 'B-01':
       return const Offset(0.252, 0.217);
     case 'B-02':
@@ -294,6 +323,7 @@ Offset posicionCroquis(String nombre) {
       return const Offset(0.252, 0.367);
     case 'B-08':
       return const Offset(0.252, 0.392);
+
     default:
       return const Offset(0.50, 0.50);
   }
@@ -424,7 +454,8 @@ class TarjetaDetalle extends StatelessWidget {
               separatorBuilder: (_, __) => const Divider(height: 1),
               itemBuilder: (context, index) {
                 final cajon = cajones[index];
-                final seleccionado = cajonSeleccionado?.nombre == cajon.nombre;
+                final seleccionado =
+                    cajonSeleccionado?.nombre == cajon.nombre;
 
                 return Material(
                   color: seleccionado
@@ -676,12 +707,14 @@ class MarcadorLeyenda extends StatelessWidget {
 class Cajon {
   final String nombre;
   final LatLng punto;
+  final Offset posicion;
   final bool disponible;
   final DateTime ultimoCambio;
 
   const Cajon({
     required this.nombre,
     required this.punto,
+    required this.posicion,
     required this.disponible,
     required this.ultimoCambio,
   });
