@@ -1,4 +1,4 @@
-import 'package:latlong2/latlong2.dart';
+import 'package:latlong2/latlong.dart';
 
 enum TipoCajon { normal, discapacitado, directivo }
 
