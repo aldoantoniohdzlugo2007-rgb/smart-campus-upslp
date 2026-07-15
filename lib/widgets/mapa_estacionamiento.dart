@@ -12,7 +12,7 @@ class MapaEstacionamiento extends StatelessWidget {
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
       // 1. Escucha la colección que creaste en Firebase
-      stream: FirebaseFirestore.instance.collection('cajones_estacionamiento').snapshots(),
+      stream: FirebaseFirestore.instance.collection('cajones_estacionamientqo').snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return const Center(child: Text('Error al cargar los cajones'));
